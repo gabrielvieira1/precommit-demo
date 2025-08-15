@@ -1,0 +1,13 @@
+# TruffleHog ignore patterns
+# Pastas a ignorar
+.git/
+logs/
+node_modules/
+.cache/
+
+# Arquivos de build/dist
+dist/
+build/
+
+# Arquivos de configuração que podem ter falsos positivos
+package-lock.json

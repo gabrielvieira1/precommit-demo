@@ -1,0 +1,46 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      - id: secure-dependencies
+        name: Snyk Security Scan
+        entry: bash -c "echo '🛡️  Executando Snyk Security Scan...' && mkdir -p logs && { snyk test --severity-threshold=high > logs/snyk.log 2>&1; if [ $? -eq 0 ]; then echo '✅ Nenhuma vulnerabilidade crítica encontrada'; else echo '❌ Vulnerabilidades críticas detectadas!'; fi; echo '📋 Resultados salvos em logs/snyk.log'; exit $?; }"
+        language: system
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: gitleaks-local
+        name: GitLeaks Secrets Scanner
+        description: Detect hardcoded secrets like passwords, api keys, and tokens in git repos
+        entry: bash -c "echo '🕵️  Executando GitLeaks via Docker...' && mkdir -p logs && { docker run --rm -v $(pwd):/path zricethezav/gitleaks:latest detect --source=/path --no-git > logs/gitleaks.log 2>&1; if [ $? -eq 0 ]; then echo '✅ Nenhum segredo detectado'; else echo '❌ Segredos encontrados!'; fi; echo '📋 Resultados salvos em logs/gitleaks.log'; exit $?; }"
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: semgrep-sast
+        name: Semgrep SAST Scanner
+        description: Static analysis security testing with Semgrep
+        entry: bash -c "echo '🔎 Executando Semgrep SAST via Docker...' && mkdir -p logs && { docker run --rm -v $(pwd):/src returntocorp/semgrep semgrep --config=auto --error --json /src > logs/semgrep.log 2>&1; if [ $? -eq 0 ]; then echo '✅ Nenhuma vulnerabilidade crítica encontrada'; else echo '❌ Vulnerabilidades encontradas!'; fi; echo '📋 Resultados salvos em logs/semgrep.log'; exit $?; }"
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: bandit-python-sast
+        name: Bandit Python Security Scanner
+        description: Security linter for Python code
+        entry: bash -c "echo '🐍 Executando Bandit Python SAST...' && mkdir -p logs && if find . -name '*.py' -not -path './.git/*' -not -path './logs/*' | head -1 | grep -q .; then { docker run --rm -v $(pwd):/src --workdir /src python:3.11-slim bash -c 'pip install bandit > /dev/null 2>&1 && bandit -r . -f json > /tmp/bandit_output.json 2>/dev/null' && docker run --rm -v $(pwd):/src --workdir /src python:3.11-slim bash -c 'cat /tmp/bandit_output.json' > logs/bandit.json 2>/dev/null; if [ $? -eq 0 ] && [ -s logs/bandit.json ] && grep -q '\"results\":\[' logs/bandit.json && [ $(grep -o '\"results\":\[' logs/bandit.json | wc -l) -gt 0 ] && [ $(jq '.results | length' logs/bandit.json 2>/dev/null || echo 0) -gt 0 ]; then echo '❌ Vulnerabilidades Python encontradas!'; echo '📋 Resultados detalhados em logs/bandit.json'; exit 1; else echo '✅ Código Python sem vulnerabilidades críticas'; echo '📋 Resultados salvos em logs/bandit.json'; exit 0; fi; }; else echo 'ℹ️  Nenhum arquivo Python encontrado, pulando Bandit...'; fi"
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
