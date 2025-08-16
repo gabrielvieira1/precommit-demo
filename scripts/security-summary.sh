@@ -20,10 +20,27 @@ echo ""
 TOTAL_ISSUES=0
 
 # Snyk
-if [[ -f "logs/snyk.log" ]] && grep -q "found [0-9]* issues" logs/snyk.log; then
-    SNYK_ISSUES=$(grep -o "found [0-9]* issues" logs/snyk.log | grep -o "[0-9]*")
-    echo -e "${RED}🛡️  Snyk: ${SNYK_ISSUES} vulnerabilidades de dependências${NC}"
-    TOTAL_ISSUES=$((TOTAL_ISSUES + SNYK_ISSUES))
+if [[ -f "logs/snyk.log" ]]; then
+    if command -v jq >/dev/null 2>&1; then
+        # Extrai JSON do log do Snyk via Docker
+        JSON_CONTENT=$(sed -n '/^{/,$p' logs/snyk.log 2>/dev/null)
+
+        if [[ -n "$JSON_CONTENT" ]] && echo "$JSON_CONTENT" | jq -e '.vulnerabilities' >/dev/null 2>&1; then
+            SNYK_ISSUES=$(echo "$JSON_CONTENT" | jq '.vulnerabilities | length' 2>/dev/null || echo "0")
+        else
+            # Fallback para formato texto
+            SNYK_ISSUES=$(grep -o "found [0-9]* issues" logs/snyk.log 2>/dev/null | grep -o "[0-9]*" || echo "0")
+        fi
+    else
+        SNYK_ISSUES=$(grep -o "found [0-9]* issues" logs/snyk.log 2>/dev/null | grep -o "[0-9]*" || echo "0")
+    fi
+
+    if [[ "$SNYK_ISSUES" =~ ^[0-9]+$ ]] && [[ "$SNYK_ISSUES" -gt 0 ]]; then
+        echo -e "${RED}🛡️  Snyk: ${SNYK_ISSUES} vulnerabilidades de dependências${NC}"
+        TOTAL_ISSUES=$((TOTAL_ISSUES + SNYK_ISSUES))
+    else
+        echo -e "${GREEN}🛡️  Snyk: ✅ OK${NC}"
+    fi
 else
     echo -e "${GREEN}🛡️  Snyk: ✅ OK${NC}"
 fi

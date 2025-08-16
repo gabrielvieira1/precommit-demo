@@ -62,10 +62,27 @@ precommit-demo/
    pip install pre-commit
    ```
 
-3. **Configure o Snyk (opcional - para análise completa):**
+3. **Configure o Snyk (recomendado - para análise completa multi-linguagem):**
+
+   **Opção A: Automática**
    ```bash
-   npm install -g snyk
-   snyk auth  # Requer conta no snyk.io
+   ./scripts/setup-snyk.sh
+   ```
+
+   **Opção B: Manual**
+   ```bash
+   # 1. Crie conta gratuita em https://snyk.io
+   # 2. Acesse https://app.snyk.io/account
+   # 3. Copie seu Auth Token
+   # 4. Configure no arquivo .env:
+   cp .env.example .env
+   # Edite .env e substitua 'your_snyk_token_here' pelo seu token
+   ```
+
+   **Teste a configuração:**
+   ```bash
+   source .env
+   docker run --rm -e SNYK_TOKEN="$SNYK_TOKEN" -v $(pwd):/project -w /project snyk/snyk:node snyk --version
    ```
 
 4. **Instale os hooks do pre-commit:**
