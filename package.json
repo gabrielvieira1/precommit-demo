@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "tinymce": "^4.1.0"
+    "tinymce": "^4.1.0",
+    "lodash": "4.17.4"
   }
 }
